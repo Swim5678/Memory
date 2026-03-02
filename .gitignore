@@ -117,3 +117,7 @@ runs/
 
 # Avoid ignoring Gradle wrapper jar file (.jar files are usually ignored)
 !gradle-wrapper.jar
+/.classpath
+/.project
+/.settings/org.eclipse.buildship.core.prefs
+/新增 文字文件.txt
