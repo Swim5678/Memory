@@ -15,6 +15,12 @@ import java.util.List;
 
 public class MemoryCommand implements CommandExecutor, TabCompleter {
 
+    private final Memory plugin;
+
+    public MemoryCommand(Memory plugin) {
+        this.plugin = plugin;
+    }
+
     private static final long MB = 1024L * 1024L;
 
     // 格式化：自動選擇 MiB 或 GiB，保留兩位小數
@@ -43,6 +49,13 @@ public class MemoryCommand implements CommandExecutor, TabCompleter {
                              @NotNull String label,
                              String[] args) {
 
+        // ── /mem reload ──────────────────────────────────
+        if (args.length == 1 && args[0].equalsIgnoreCase("reload")) {
+            plugin.reloadConfig();
+            sender.sendMessage(Component.text("Memory Monitor 配置已重新載入。").color(GOLD));
+            return true;
+        }
+
         PterodactylMemoryMonitor.MemoryInfo info =
                 PterodactylMemoryMonitor.getMemoryInfo();
 
@@ -52,10 +65,10 @@ public class MemoryCommand implements CommandExecutor, TabCompleter {
                 .decorate(TextDecoration.BOLD));
 
         // ── 容器層級（最重要）────────────────────────────
-        if (info.containerUsed > 0 && info.containerLimit > 0) {
+        if (info.containerUsed >= 0 && info.containerLimit > 0) {
 
             // 有效值（扣除 inactive page cache）
-            boolean hasEffective = info.containerEffective > 0;
+            boolean hasEffective = info.containerEffective >= 0;
 
             // 分母：優先用 -Xmx（heapMax），fallback 到 cgroup limit
             long denominator = (info.heapMax > 0) ? info.heapMax : info.containerLimit;
@@ -119,10 +132,10 @@ public class MemoryCommand implements CommandExecutor, TabCompleter {
         sendDetail(sender, "Threads",
                 String.valueOf(info.threadCount));
 
-        if (info.containerUsed > 0) {
+        if (info.containerUsed >= 0) {
             long tracked   = info.heapUsed + info.nonHeapUsed + info.directUsed;
             // 優先用有效值計算差值，排除 page cache 的干擾
-            long baseline  = info.containerEffective > 0 ? info.containerEffective : info.containerUsed;
+            long baseline  = info.containerEffective >= 0 ? info.containerEffective : info.containerUsed;
             long untracked = baseline - tracked;
             sendDetail(sender, "其他 (GC/Thread Stack/Native)",
                     "~" + formatBytes(Math.max(0, untracked)));
@@ -152,6 +165,12 @@ public class MemoryCommand implements CommandExecutor, TabCompleter {
                                       @NotNull Command cmd,
                                       @NotNull String alias,
                                       String[] args) {
+        if (args.length == 1) {
+            String input = args[0].toLowerCase();
+            if ("reload".startsWith(input)) {
+                return List.of("reload");
+            }
+        }
         return Collections.emptyList();
     }
 }

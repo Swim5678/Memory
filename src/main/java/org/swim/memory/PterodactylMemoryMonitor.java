@@ -143,7 +143,7 @@ public class PterodactylMemoryMonitor {
 
         /** 面板顯示的百分比（含 cache） */
         public String getRawPercentage() {
-            if (containerUsed > 0 && containerLimit > 0) {
+            if (containerUsed >= 0 && containerLimit > 0) {
                 return (containerUsed * 100 / containerLimit) + "%";
             }
             return "未知";
@@ -151,7 +151,7 @@ public class PterodactylMemoryMonitor {
 
         /** 有效使用百分比（扣除 cache，用於 OOM 判斷） */
         public String getEffectivePercentage() {
-            if (containerEffective > 0 && containerLimit > 0) {
+            if (containerEffective >= 0 && containerLimit > 0) {
                 return (containerEffective * 100 / containerLimit) + "%";
             }
             return "未知";
@@ -159,8 +159,9 @@ public class PterodactylMemoryMonitor {
 
         /** 以有效使用量判斷是否危險（>85%），避免 page cache 誤報 */
         public boolean isDangerous() {
-            long check = containerEffective > 0 ? containerEffective : containerUsed;
-            if (check > 0 && containerLimit > 0) {
+            if (containerLimit <= 0) return false;
+            long check = containerEffective >= 0 ? containerEffective : containerUsed;
+            if (check >= 0) {
                 return check * 100 / containerLimit > 85;
             }
             return false;
@@ -168,9 +169,16 @@ public class PterodactylMemoryMonitor {
 
         /** 有效使用量的比例（0-100），回傳 -1 表示無法取得 */
         public long getEffectiveRatio() {
-            long check = containerEffective > 0 ? containerEffective : containerUsed;
-            if (check > 0 && containerLimit > 0) {
-                return check * 100 / containerLimit;
+            // 分母：優先用 -Xmx（heapMax），fallback 到 cgroup limit（與 /mem 顯示一致）
+            long denominator = (heapMax > 0) ? heapMax : containerLimit;
+            if (denominator <= 0) return -1;
+            // containerEffective >= 0 表示已成功從 cgroup 讀取（0 也是合法值）
+            if (containerEffective >= 0) {
+                return containerEffective * 100 / denominator;
+            }
+            // fallback：使用原始值
+            if (containerUsed >= 0) {
+                return containerUsed * 100 / denominator;
             }
             return -1;
         }

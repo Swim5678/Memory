@@ -41,6 +41,11 @@ public class MemoryMonitorTask extends BukkitRunnable {
 
         long ratio = info.getEffectiveRatio();
 
+        log.info("[MemoryMonitor DEBUG] containerUsed=" + info.containerUsed
+                + " containerEffective=" + info.containerEffective
+                + " containerLimit=" + info.containerLimit
+                + " ratio=" + ratio);
+
         // 無法取得記憶體資訊（非 Linux 容器環境）→ 靜默略過
         if (ratio < 0) return;
 

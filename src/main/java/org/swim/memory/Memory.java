@@ -12,7 +12,7 @@ public final class Memory extends JavaPlugin {
         saveDefaultConfig();
 
         // 註冊 /mem 指令
-        MemoryCommand handler = new MemoryCommand();
+        MemoryCommand handler = new MemoryCommand(this);
         Objects.requireNonNull(getCommand("mem")).setExecutor(handler);
         Objects.requireNonNull(getCommand("mem")).setTabCompleter(handler);
 

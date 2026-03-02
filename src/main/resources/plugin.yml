@@ -8,7 +8,7 @@ description: 顯示 Pterodactyl 容器及 JVM 記憶體使用狀況，並自動�
 commands:
   mem:
     description: 查看伺服器記憶體使用情況
-    usage: /mem
+    usage: /mem [reload]
     permission: memory.check
 
 permissions:
