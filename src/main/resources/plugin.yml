@@ -1,5 +1,17 @@
 name: Memory
-version: '1.0-SNAPSHOT'
+version: '${version}'
 main: org.swim.memory.Memory
 api-version: '1.21'
 authors: [ Swim ]
+description: 顯示 Pterodactyl 容器及 JVM 記憶體使用狀況
+
+commands:
+  mem:
+    description: 查看伺服器記憶體使用情況
+    usage: /mem
+    permission: memory.check
+
+permissions:
+  memory.check:
+    description: 允許使用 /mem 指令
+    default: op
