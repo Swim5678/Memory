@@ -14,10 +14,10 @@ import java.util.logging.Logger;
 
 /**
  * 每隔固定秒數自動偵測記憶體使用率：
- *  - 達到 warn 閾值（預設 90%）：透過 Discord Webhook 在指定頻道發送 @here 警告
- *  - 達到 shutdown 閾值（預設 95%）：發送關機通知後執行 /stop
- *  - 未達任何閾值：靜默，不做任何事
- *
+ * - 達到 warn 閾值（預設 90%）：透過 Discord Webhook 在指定頻道發送 @here 警告
+ * - 達到 shutdown 閾值（預設 95%）：發送關機通知後執行 /stop
+ * - 未達任何閾值：靜默，不做任何事
+ * <p>
  * 使用「有效使用量」（扣除 inactive_file page cache）作為判斷依據，
  * 避免 page cache 造成誤報。
  */
@@ -26,13 +26,45 @@ public class MemoryMonitorTask extends BukkitRunnable {
     private final Memory plugin;
     private final Logger log;
 
-    /** 上一輪是否已發出過 warn 通知，避免同一次持續超標時重複轟炸 */
+    /**
+     * 上一輪是否已發出過 warn 通知，避免同一次持續超標時重複轟炸
+     */
     private boolean warnSent = false;
 
     public MemoryMonitorTask(Memory plugin) {
         this.plugin = plugin;
-        this.log    = plugin.getLogger();
+        this.log = plugin.getLogger();
     }
+
+    /**
+     * 將字串轉為合法 JSON 字串（含引號），對特殊字元進行跳脫。
+     * 刻意不引入外部 JSON 函式庫，保持零依賴。
+     */
+    private static String toJsonString(String s) {
+        StringBuilder sb = new StringBuilder("\"");
+        for (char c : s.toCharArray()) {
+            switch (c) {
+                case '"' -> sb.append("\\\"");
+                case '\\' -> sb.append("\\\\");
+                case '\n' -> sb.append("\\n");
+                case '\r' -> sb.append("\\r");
+                case '\t' -> sb.append("\\t");
+                default -> {
+                    if (c < 0x20) {
+                        sb.append(String.format("\\u%04x", (int) c));
+                    } else {
+                        sb.append(c);
+                    }
+                }
+            }
+        }
+        sb.append('"');
+        return sb.toString();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 私用輔助方法
+    // ─────────────────────────────────────────────────────────────────────────
 
     @Override
     public void run() {
@@ -44,7 +76,7 @@ public class MemoryMonitorTask extends BukkitRunnable {
         // 無法取得記憶體資訊（非 Linux 容器環境）→ 靜默略過
         if (ratio < 0) return;
 
-        int warnThreshold     = plugin.getConfig().getInt("monitor.thresholds.warn",     90);
+        int warnThreshold = plugin.getConfig().getInt("monitor.thresholds.warn", 90);
         int shutdownThreshold = plugin.getConfig().getInt("monitor.thresholds.shutdown", 95);
 
         // ── 達到關機閾值 ──────────────────────────────────────────────────────
@@ -93,11 +125,9 @@ public class MemoryMonitorTask extends BukkitRunnable {
         warnSent = false;
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // 私用輔助方法
-    // ─────────────────────────────────────────────────────────────────────────
-
-    /** 將訊息樣板中的 {percent} 取代為實際百分比 */
+    /**
+     * 將訊息樣板中的 {percent} 取代為實際百分比
+     */
     private String buildMessage(String template, long percent) {
         return template.replace("{percent}", String.valueOf(percent));
     }
@@ -142,31 +172,5 @@ public class MemoryMonitorTask extends BukkitRunnable {
         } catch (Exception e) {
             log.warning("[MemoryMonitor] 發送 Discord Webhook 失敗：" + e.getMessage());
         }
-    }
-
-    /**
-     * 將字串轉為合法 JSON 字串（含引號），對特殊字元進行跳脫。
-     * 刻意不引入外部 JSON 函式庫，保持零依賴。
-     */
-    private static String toJsonString(String s) {
-        StringBuilder sb = new StringBuilder("\"");
-        for (char c : s.toCharArray()) {
-            switch (c) {
-                case '"'  -> sb.append("\\\"");
-                case '\\' -> sb.append("\\\\");
-                case '\n' -> sb.append("\\n");
-                case '\r' -> sb.append("\\r");
-                case '\t' -> sb.append("\\t");
-                default   -> {
-                    if (c < 0x20) {
-                        sb.append(String.format("\\u%04x", (int) c));
-                    } else {
-                        sb.append(c);
-                    }
-                }
-            }
-        }
-        sb.append('"');
-        return sb.toString();
     }
 }

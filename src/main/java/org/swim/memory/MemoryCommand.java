@@ -15,13 +15,19 @@ import java.util.List;
 
 public class MemoryCommand implements CommandExecutor, TabCompleter {
 
+    private static final long MB = 1024L * 1024L;
+    // 自訂 RGB 顏色
+    private static final TextColor GOLD = TextColor.color(0xFFAA00);
+    private static final TextColor GRAY = NamedTextColor.GRAY;
+    private static final TextColor DARK_GRAY = NamedTextColor.DARK_GRAY;
+    private static final TextColor WHITE = NamedTextColor.WHITE;
+    private static final TextColor GREEN = NamedTextColor.GREEN;
+    private static final TextColor YELLOW = NamedTextColor.YELLOW;
+    private static final TextColor RED = NamedTextColor.RED;
     private final Memory plugin;
-
     public MemoryCommand(Memory plugin) {
         this.plugin = plugin;
     }
-
-    private static final long MB = 1024L * 1024L;
 
     // 格式化：自動選擇 MiB 或 GiB，保留兩位小數
     private static String formatBytes(long bytes) {
@@ -33,15 +39,6 @@ public class MemoryCommand implements CommandExecutor, TabCompleter {
         }
         return (mib100 / 100) + "." + String.format("%02d", mib100 % 100) + " MiB";
     }
-
-    // 自訂 RGB 顏色
-    private static final TextColor GOLD     = TextColor.color(0xFFAA00);
-    private static final TextColor GRAY     = NamedTextColor.GRAY;
-    private static final TextColor DARK_GRAY = NamedTextColor.DARK_GRAY;
-    private static final TextColor WHITE    = NamedTextColor.WHITE;
-    private static final TextColor GREEN    = NamedTextColor.GREEN;
-    private static final TextColor YELLOW   = NamedTextColor.YELLOW;
-    private static final TextColor RED      = NamedTextColor.RED;
 
     @Override
     public boolean onCommand(@NotNull CommandSender sender,
@@ -90,21 +87,21 @@ public class MemoryCommand implements CommandExecutor, TabCompleter {
             if (hasEffective) {
                 long cacheMiB = (info.containerUsed - info.containerEffective) / MB;
                 sender.sendMessage(
-                    Component.text("容器: ").color(barColor)
-                        .append(Component.text(
-                                formatBytes(info.containerEffective) + " / " + formatBytes(denominator)
-                                + "  (" + pct + "%)"
-                                + (cacheMiB > 0 ? "  [-" + cacheMiB + " MiB cache]" : "")).color(WHITE))
+                        Component.text("容器: ").color(barColor)
+                                .append(Component.text(
+                                        formatBytes(info.containerEffective) + " / " + formatBytes(denominator)
+                                                + "  (" + pct + "%)"
+                                                + (cacheMiB > 0 ? "  [-" + cacheMiB + " MiB cache]" : "")).color(WHITE))
                 );
             } else {
                 sender.sendMessage(
-                    Component.text("容器: ").color(barColor)
-                        .append(Component.text(
-                                formatBytes(displayUsed) + " / " + formatBytes(denominator)
-                                + "  (" + pct + ")").color(WHITE))
+                        Component.text("容器: ").color(barColor)
+                                .append(Component.text(
+                                        formatBytes(displayUsed) + " / " + formatBytes(denominator)
+                                                + "  (" + pct + ")").color(WHITE))
                 );
             }
-            int bars   = 20;
+            int bars = 20;
             int filled = (int) Math.max(0, Math.min(bars, displayUsed * bars / denominator));
 
             Component bar = Component.text("[").color(DARK_GRAY);
@@ -133,9 +130,9 @@ public class MemoryCommand implements CommandExecutor, TabCompleter {
                 String.valueOf(info.threadCount));
 
         if (info.containerUsed >= 0) {
-            long tracked   = info.heapUsed + info.nonHeapUsed + info.directUsed;
+            long tracked = info.heapUsed + info.nonHeapUsed + info.directUsed;
             // 優先用有效值計算差值，排除 page cache 的干擾
-            long baseline  = info.containerEffective >= 0 ? info.containerEffective : info.containerUsed;
+            long baseline = info.containerEffective >= 0 ? info.containerEffective : info.containerUsed;
             long untracked = baseline - tracked;
             sendDetail(sender, "其他 (GC/Thread Stack/Native)",
                     "~" + formatBytes(Math.max(0, untracked)));
@@ -155,8 +152,8 @@ public class MemoryCommand implements CommandExecutor, TabCompleter {
 
     private void sendDetail(CommandSender sender, String label, String value) {
         sender.sendMessage(
-            Component.text("  " + label + ": ").color(GRAY)
-                .append(Component.text(value).color(WHITE))
+                Component.text("  " + label + ": ").color(GRAY)
+                        .append(Component.text(value).color(WHITE))
         );
     }
 
