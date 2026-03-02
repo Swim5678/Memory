@@ -17,6 +17,17 @@ public class MemoryCommand implements CommandExecutor, TabCompleter {
 
     private static final long MB = 1024L * 1024L;
 
+    // 格式化：自動選擇 MiB 或 GiB，保留兩位小數
+    private static String formatBytes(long bytes) {
+        long mib100 = bytes * 100 / MB;           // MiB × 100（兩位小數）
+        if (mib100 >= 1024 * 100) {
+            // GiB
+            long gib100 = bytes * 100 / (MB * 1024);
+            return (gib100 / 100) + "." + String.format("%02d", gib100 % 100) + " GiB";
+        }
+        return (mib100 / 100) + "." + String.format("%02d", mib100 % 100) + " MiB";
+    }
+
     // 自訂 RGB 顏色
     private static final TextColor GOLD     = TextColor.color(0xFFAA00);
     private static final TextColor GRAY     = NamedTextColor.GRAY;
@@ -42,11 +53,15 @@ public class MemoryCommand implements CommandExecutor, TabCompleter {
 
         // ── 容器層級（最重要）────────────────────────────
         if (info.containerUsed > 0 && info.containerLimit > 0) {
-            long usedMB  = info.containerUsed  / MB;
-            long limitMB = info.containerLimit / MB;
-            String pct   = info.getUsagePercentage();
 
-            long ratio = info.containerUsed * 100 / info.containerLimit;
+            // 有效值（扣除 inactive page cache）
+            boolean hasEffective = info.containerEffective > 0;
+
+            // 分母：優先用 -Xmx（heapMax），fallback 到 cgroup limit
+            long denominator = (info.heapMax > 0) ? info.heapMax : info.containerLimit;
+
+            // 顏色與進度條依有效值判斷（避免 cache 誤報）
+            long ratio = info.getEffectiveRatio();
             TextColor barColor;
             if (info.isDangerous()) {
                 barColor = RED;
@@ -56,14 +71,28 @@ public class MemoryCommand implements CommandExecutor, TabCompleter {
                 barColor = GREEN;
             }
 
-            sender.sendMessage(
-                Component.text("容器總使用: ").color(barColor)
-                    .append(Component.text(usedMB + " / " + limitMB + " MB (" + pct + ")").color(WHITE))
-            );
-
-            // 進度條
+            // 有效值（扣除 page cache）
+            long displayUsed = hasEffective ? info.containerEffective : info.containerUsed;
+            long pct = displayUsed * 100 / denominator;
+            if (hasEffective) {
+                long cacheMiB = (info.containerUsed - info.containerEffective) / MB;
+                sender.sendMessage(
+                    Component.text("容器: ").color(barColor)
+                        .append(Component.text(
+                                formatBytes(info.containerEffective) + " / " + formatBytes(denominator)
+                                + "  (" + pct + "%)"
+                                + (cacheMiB > 0 ? "  [-" + cacheMiB + " MiB cache]" : "")).color(WHITE))
+                );
+            } else {
+                sender.sendMessage(
+                    Component.text("容器: ").color(barColor)
+                        .append(Component.text(
+                                formatBytes(displayUsed) + " / " + formatBytes(denominator)
+                                + "  (" + pct + ")").color(WHITE))
+                );
+            }
             int bars   = 20;
-            int filled = (int) (info.containerUsed * bars / info.containerLimit);
+            int filled = (int) Math.max(0, Math.min(bars, displayUsed * bars / denominator));
 
             Component bar = Component.text("[").color(DARK_GRAY);
             for (int i = 0; i < bars; i++) {
@@ -82,19 +111,21 @@ public class MemoryCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage(Component.text("── JVM 細節 ──").color(GRAY));
 
         sendDetail(sender, "Heap",
-                (info.heapUsed / MB) + " / " + (info.heapMax / MB) + " MB");
+                formatBytes(info.heapUsed) + " / " + formatBytes(info.heapMax));
         sendDetail(sender, "Non-Heap",
-                (info.nonHeapUsed / MB) + " MB");
+                formatBytes(info.nonHeapUsed));
         sendDetail(sender, "Direct (Netty)",
-                (info.directUsed / MB) + " MB");
+                formatBytes(info.directUsed));
         sendDetail(sender, "Threads",
                 String.valueOf(info.threadCount));
 
         if (info.containerUsed > 0) {
             long tracked   = info.heapUsed + info.nonHeapUsed + info.directUsed;
-            long untracked = info.containerUsed - tracked;
+            // 優先用有效值計算差值，排除 page cache 的干擾
+            long baseline  = info.containerEffective > 0 ? info.containerEffective : info.containerUsed;
+            long untracked = baseline - tracked;
             sendDetail(sender, "其他 (GC/Thread Stack/Native)",
-                    "~" + (untracked / MB) + " MB");
+                    "~" + formatBytes(Math.max(0, untracked)));
         }
 
         // ── 警告 ──────────────────────────────────────────

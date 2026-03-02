@@ -1,0 +1,29 @@
+# Memory Monitor 自動監測設定
+monitor:
+  # 監測間隔（秒），預設 30 秒
+  interval-seconds: 30
+
+  # 記憶體使用率閾值（百分比，使用有效使用量計算，扣除 page cache）
+  thresholds:
+    # 達到此百分比時，透過 Discord Webhook 發送 @here 警告
+    warn: 90
+    # 達到此百分比時，自動執行 /stop 關閉伺服器
+    shutdown: 95
+
+  # 關機前踢出所有玩家的訊息（支援 MiniMessage 格式）
+  # MiniMessage 格式參考：https://docs.advntr.dev/minimessage/format.html
+  kick-message: "<red><bold>伺服器記憶體即將溢出</bold></red>\n<gray>請聯繫管理員重新開機。</gray>"
+
+discord:
+  # Discord Webhook URL（留空則停用 Discord 通知）
+  # 範例：https://discord.com/api/webhooks/123456789/abcdefg
+  webhook-url: ""
+
+  # 是否在訊息中加入 @here 提及
+  mention-here: true
+
+  # 自訂警告訊息（可用 {percent} 代入當前使用率）
+  warn-message: "⚠️ 伺服器記憶體使用率已達 {percent}%，請注意！"
+
+  # 自訂關機通知訊息（可用 {percent} 代入當前使用率）
+  shutdown-message: "🔴 伺服器記憶體使用率已達 {percent}%，即將自動關閉伺服器！"

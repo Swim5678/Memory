@@ -3,7 +3,7 @@ version: '${version}'
 main: org.swim.memory.Memory
 api-version: '1.21'
 authors: [ Swim ]
-description: 顯示 Pterodactyl 容器及 JVM 記憶體使用狀況
+description: 顯示 Pterodactyl 容器及 JVM 記憶體使用狀況，並自動監測記憶體用量（達警告閾值發送 Discord Webhook，達關機閾值自動停機）
 
 commands:
   mem:
