@@ -23,7 +23,7 @@ import java.util.logging.Logger;
  */
 public class MemoryMonitorTask extends BukkitRunnable {
 
-    private final Memory plugin;
+    private final AdvancedMonitor plugin;
     private final Logger log;
 
     /**
@@ -31,7 +31,7 @@ public class MemoryMonitorTask extends BukkitRunnable {
      */
     private boolean warnSent = false;
 
-    public MemoryMonitorTask(Memory plugin) {
+    public MemoryMonitorTask(AdvancedMonitor plugin) {
         this.plugin = plugin;
         this.log = plugin.getLogger();
     }

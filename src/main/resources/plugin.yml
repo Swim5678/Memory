@@ -1,4 +1,4 @@
-name: Memory
+name: AdvancedMonitor
 version: '${version}'
 main: org.swim.memory.Memory
 api-version: '1.21'
@@ -8,10 +8,14 @@ description: 顯示 Pterodactyl 容器及 JVM 記憶體使用狀況，並自動�
 commands:
   mem:
     description: 查看伺服器記憶體使用情況
-    usage: /mem [reload]
+    usage: /mem
+    permission: memory.check
+  am:
+    description: AdvancedMonitor 管理指令
+    usage: /am reload
     permission: memory.check
 
 permissions:
   memory.check:
-    description: 允許使用 /mem 指令
+    description: 允許使用 /mem 及 /am 指令
     default: op

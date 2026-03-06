@@ -24,8 +24,8 @@ public class MemoryCommand implements CommandExecutor, TabCompleter {
     private static final TextColor GREEN = NamedTextColor.GREEN;
     private static final TextColor YELLOW = NamedTextColor.YELLOW;
     private static final TextColor RED = NamedTextColor.RED;
-    private final Memory plugin;
-    public MemoryCommand(Memory plugin) {
+    private final AdvancedMonitor plugin;
+    public MemoryCommand(AdvancedMonitor plugin) {
         this.plugin = plugin;
     }
 
@@ -46,10 +46,14 @@ public class MemoryCommand implements CommandExecutor, TabCompleter {
                              @NotNull String label,
                              String[] args) {
 
-        // ── /mem reload ──────────────────────────────────
-        if (args.length == 1 && args[0].equalsIgnoreCase("reload")) {
-            plugin.reloadConfig();
-            sender.sendMessage(Component.text("Memory Monitor 配置已重新載入。").color(GOLD));
+        // ── /am reload ───────────────────────────────────
+        if (cmd.getName().equalsIgnoreCase("am")) {
+            if (args.length == 1 && args[0].equalsIgnoreCase("reload")) {
+                plugin.reloadConfig();
+                sender.sendMessage(Component.text("AdvancedMonitor 配置已重新載入。").color(GOLD));
+            } else {
+                sender.sendMessage(Component.text("用法：/am reload").color(GOLD));
+            }
             return true;
         }
 
@@ -162,7 +166,7 @@ public class MemoryCommand implements CommandExecutor, TabCompleter {
                                       @NotNull Command cmd,
                                       @NotNull String alias,
                                       String[] args) {
-        if (args.length == 1) {
+        if (cmd.getName().equalsIgnoreCase("am") && args.length == 1) {
             String input = args[0].toLowerCase();
             if ("reload".startsWith(input)) {
                 return List.of("reload");
