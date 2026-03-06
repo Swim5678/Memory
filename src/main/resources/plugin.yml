@@ -5,16 +5,6 @@ api-version: '1.21'
 authors: [ Swim ]
 description: 顯示 Pterodactyl 容器及 JVM 記憶體使用狀況，並自動監測記憶體用量（達警告閾值發送 Discord Webhook，達關機閾值自動停機）
 
-commands:
-  mem:
-    description: 查看伺服器記憶體使用情況
-    usage: /mem
-    permission: memory.check
-  am:
-    description: AdvancedMonitor 管理指令
-    usage: /am [info|reload]
-    permission: memory.check
-
 permissions:
   memory.check:
     description: 允許使用 /mem 及 /am 指令

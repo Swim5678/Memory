@@ -4,19 +4,11 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.command.TabCompleter;
-import org.jetbrains.annotations.NotNull;
 
-import java.util.Collections;
-import java.util.List;
-
-public class MemoryCommand implements CommandExecutor, TabCompleter {
+public class MemoryCommand {
 
     private static final long MB = 1024L * 1024L;
-    // 自訂 RGB 顏色
     private static final TextColor GOLD = TextColor.color(0xFFAA00);
     private static final TextColor GRAY = NamedTextColor.GRAY;
     private static final TextColor DARK_GRAY = NamedTextColor.DARK_GRAY;
@@ -32,41 +24,22 @@ public class MemoryCommand implements CommandExecutor, TabCompleter {
 
     // 格式化：自動選擇 MiB 或 GiB，保留兩位小數
     private static String formatBytes(long bytes) {
-        long mib100 = bytes * 100 / MB;           // MiB × 100（兩位小數）
+        long mib100 = bytes * 100 / MB;
         if (mib100 >= 1024 * 100) {
-            // GiB
             long gib100 = bytes * 100 / (MB * 1024);
             return (gib100 / 100) + "." + String.format("%02d", gib100 % 100) + " GiB";
         }
         return (mib100 / 100) + "." + String.format("%02d", mib100 % 100) + " MiB";
     }
 
-    @Override
-    public boolean onCommand(@NotNull CommandSender sender,
-                             @NotNull Command cmd,
-                             @NotNull String label,
-                             String[] args) {
-
-        // ── /am ──────────────────────────────────────────
-        if (cmd.getName().equalsIgnoreCase("am")) {
-            if (args.length == 0 || args[0].equalsIgnoreCase("info")) {
-                sendOverview(sender);
-            } else if (args[0].equalsIgnoreCase("reload")) {
-                plugin.reloadConfig();
-                sender.sendMessage(Component.text("AdvancedMonitor 配置已重新載入。").color(GOLD));
-            } else {
-                sender.sendMessage(Component.text("用法：/am [info|reload]").color(GOLD));
-            }
-            return true;
-        }
-
-        // ── /mem（原版不變）──────────────────────────────
-        sendMemoryReport(sender);
-        return true;
+    // ── /am reload ────────────────────────────────────────
+    public void executeReload(CommandSender sender) {
+        plugin.reloadConfig();
+        sender.sendMessage(Component.text("AdvancedMonitor 配置已重新載入。").color(GOLD));
     }
 
     // ── 整體概況（TPS + 記憶體）────────────────────────────
-    private void sendOverview(CommandSender sender) {
+    public void sendOverview(CommandSender sender) {
         sender.sendMessage(Component.text("══ 伺服器概況 ══")
                 .color(GOLD)
                 .decorate(TextDecoration.BOLD));
@@ -74,21 +47,32 @@ public class MemoryCommand implements CommandExecutor, TabCompleter {
         // TPS
         double[] tps = plugin.getServer().getTPS();
         sender.sendMessage(Component.text("── TPS ──").color(GRAY));
-        sender.sendMessage(
-                Component.text("  1m: ").color(GRAY)
-                        .append(tpsComponent(tps[0]))
-                        .append(Component.text("  5m: ").color(GRAY))
-                        .append(tpsComponent(tps[1]))
-                        .append(Component.text("  15m: ").color(GRAY))
-                        .append(tpsComponent(tps[2]))
-        );
+        String[] labels = {"1m", "5m", "15m"};
+        for (int t = 0; t < 3; t++) {
+            double val = Math.min(tps[t], 20.0);
+            TextColor tpsColor = val >= 19.0 ? GREEN : val >= 15.0 ? YELLOW : RED;
+            int filled = (int) Math.round(val * 20 / 20.0);
+
+            Component tpsBar = Component.text("[").color(DARK_GRAY);
+            for (int i = 0; i < 20; i++) {
+                tpsBar = tpsBar.append(Component.text("█").color(i < filled ? tpsColor : GRAY));
+            }
+            tpsBar = tpsBar.append(Component.text("]").color(DARK_GRAY));
+
+            sender.sendMessage(
+                    Component.text("  " + labels[t] + ": ").color(GRAY)
+                            .append(tpsComponent(tps[t]))
+                            .append(Component.text("  ").color(GRAY))
+                            .append(tpsBar)
+            );
+        }
 
         // 記憶體（不顯示標題，已在概況標題下）
         sendMemoryReport(sender, false);
     }
 
     // ── 記憶體報告（/mem 原版邏輯，完全不變）────────────────
-    private void sendMemoryReport(CommandSender sender) {
+    public void sendMemoryReport(CommandSender sender) {
         sendMemoryReport(sender, true);
     }
 
@@ -106,13 +90,9 @@ public class MemoryCommand implements CommandExecutor, TabCompleter {
         // ── 容器層級（最重要）────────────────────────────
         if (info.containerUsed >= 0 && info.containerLimit > 0) {
 
-            // 有效值（扣除 inactive page cache）
             boolean hasEffective = info.containerEffective >= 0;
-
-            // 分母：優先用 -Xmx（heapMax），fallback 到 cgroup limit
             long denominator = (info.heapMax > 0) ? info.heapMax : info.containerLimit;
 
-            // 顏色與進度條依有效值判斷（避免 cache 誤報）
             long ratio = info.getEffectiveRatio();
             TextColor barColor;
             if (info.isDangerous()) {
@@ -123,7 +103,6 @@ public class MemoryCommand implements CommandExecutor, TabCompleter {
                 barColor = GREEN;
             }
 
-            // 有效值（扣除 page cache）
             long displayUsed = hasEffective ? info.containerEffective : info.containerUsed;
             long pct = displayUsed * 100 / denominator;
             if (hasEffective) {
@@ -173,7 +152,6 @@ public class MemoryCommand implements CommandExecutor, TabCompleter {
 
         if (info.containerUsed >= 0) {
             long tracked = info.heapUsed + info.nonHeapUsed + info.directUsed;
-            // 優先用有效值計算差值，排除 page cache 的干擾
             long baseline = info.containerEffective >= 0 ? info.containerEffective : info.containerUsed;
             long untracked = baseline - tracked;
             sendDetail(sender, "其他 (GC/Thread Stack/Native)",
@@ -190,7 +168,6 @@ public class MemoryCommand implements CommandExecutor, TabCompleter {
         }
     }
 
-    // TPS 數值上色
     private Component tpsComponent(double tps) {
         double capped = Math.min(tps, 20.0);
         String formatted = String.format("%.1f", capped);
@@ -203,20 +180,6 @@ public class MemoryCommand implements CommandExecutor, TabCompleter {
                 Component.text("  " + label + ": ").color(GRAY)
                         .append(Component.text(value).color(WHITE))
         );
-    }
-
-    @Override
-    public List<String> onTabComplete(@NotNull CommandSender sender,
-                                      @NotNull Command cmd,
-                                      @NotNull String alias,
-                                      String[] args) {
-        if (cmd.getName().equalsIgnoreCase("am") && args.length == 1) {
-            String input = args[0].toLowerCase();
-            return List.of("info", "reload").stream()
-                    .filter(s -> s.startsWith(input))
-                    .toList();
-        }
-        return Collections.emptyList();
     }
 }
 
