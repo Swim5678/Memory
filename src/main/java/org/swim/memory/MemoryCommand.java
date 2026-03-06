@@ -62,9 +62,8 @@ public class MemoryCommand {
             sender.sendMessage(
                     Component.text("  " + labels[t] + ": ").color(GRAY)
                             .append(tpsComponent(tps[t]))
-                            .append(Component.text("  ").color(GRAY))
-                            .append(tpsBar)
             );
+            sender.sendMessage(tpsBar);
         }
 
         // 記憶體（不顯示標題，已在概況標題下）
