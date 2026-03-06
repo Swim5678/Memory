@@ -83,19 +83,25 @@ public class MemoryCommand implements CommandExecutor, TabCompleter {
                         .append(tpsComponent(tps[2]))
         );
 
-        // 記憶體（直接沿用現有邏輯）
-        sendMemoryReport(sender);
+        // 記憶體（不顯示標題，已在概況標題下）
+        sendMemoryReport(sender, false);
     }
 
     // ── 記憶體報告（/mem 原版邏輯，完全不變）────────────────
     private void sendMemoryReport(CommandSender sender) {
+        sendMemoryReport(sender, true);
+    }
+
+    private void sendMemoryReport(CommandSender sender, boolean showTitle) {
         PterodactylMemoryMonitor.MemoryInfo info =
                 PterodactylMemoryMonitor.getMemoryInfo();
 
         // ── 標題 ─────────────────────────────────────────
-        sender.sendMessage(Component.text("══ 記憶體報告 ══")
-                .color(GOLD)
-                .decorate(TextDecoration.BOLD));
+        if (showTitle) {
+            sender.sendMessage(Component.text("══ 記憶體報告 ══")
+                    .color(GOLD)
+                    .decorate(TextDecoration.BOLD));
+        }
 
         // ── 容器層級（最重要）────────────────────────────
         if (info.containerUsed >= 0 && info.containerLimit > 0) {
