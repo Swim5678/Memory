@@ -25,6 +25,7 @@ public class MemoryCommand implements CommandExecutor, TabCompleter {
     private static final TextColor YELLOW = NamedTextColor.YELLOW;
     private static final TextColor RED = NamedTextColor.RED;
     private final AdvancedMonitor plugin;
+
     public MemoryCommand(AdvancedMonitor plugin) {
         this.plugin = plugin;
     }
@@ -46,17 +47,48 @@ public class MemoryCommand implements CommandExecutor, TabCompleter {
                              @NotNull String label,
                              String[] args) {
 
-        // ── /am reload ───────────────────────────────────
+        // ── /am ──────────────────────────────────────────
         if (cmd.getName().equalsIgnoreCase("am")) {
-            if (args.length == 1 && args[0].equalsIgnoreCase("reload")) {
+            if (args.length == 0 || args[0].equalsIgnoreCase("info")) {
+                sendOverview(sender);
+            } else if (args[0].equalsIgnoreCase("reload")) {
                 plugin.reloadConfig();
                 sender.sendMessage(Component.text("AdvancedMonitor 配置已重新載入。").color(GOLD));
             } else {
-                sender.sendMessage(Component.text("用法：/am reload").color(GOLD));
+                sender.sendMessage(Component.text("用法：/am [info|reload]").color(GOLD));
             }
             return true;
         }
 
+        // ── /mem（原版不變）──────────────────────────────
+        sendMemoryReport(sender);
+        return true;
+    }
+
+    // ── 整體概況（TPS + 記憶體）────────────────────────────
+    private void sendOverview(CommandSender sender) {
+        sender.sendMessage(Component.text("══ 伺服器概況 ══")
+                .color(GOLD)
+                .decorate(TextDecoration.BOLD));
+
+        // TPS
+        double[] tps = plugin.getServer().getTPS();
+        sender.sendMessage(Component.text("── TPS ──").color(GRAY));
+        sender.sendMessage(
+                Component.text("  1m: ").color(GRAY)
+                        .append(tpsComponent(tps[0]))
+                        .append(Component.text("  5m: ").color(GRAY))
+                        .append(tpsComponent(tps[1]))
+                        .append(Component.text("  15m: ").color(GRAY))
+                        .append(tpsComponent(tps[2]))
+        );
+
+        // 記憶體（直接沿用現有邏輯）
+        sendMemoryReport(sender);
+    }
+
+    // ── 記憶體報告（/mem 原版邏輯，完全不變）────────────────
+    private void sendMemoryReport(CommandSender sender) {
         PterodactylMemoryMonitor.MemoryInfo info =
                 PterodactylMemoryMonitor.getMemoryInfo();
 
@@ -150,8 +182,14 @@ public class MemoryCommand implements CommandExecutor, TabCompleter {
             sender.sendMessage(Component.text("  可能隨時被 OOM Kill！")
                     .color(RED).decorate(TextDecoration.BOLD));
         }
+    }
 
-        return true;
+    // TPS 數值上色
+    private Component tpsComponent(double tps) {
+        double capped = Math.min(tps, 20.0);
+        String formatted = String.format("%.1f", capped);
+        TextColor color = capped >= 19.0 ? GREEN : capped >= 15.0 ? YELLOW : RED;
+        return Component.text(formatted).color(color);
     }
 
     private void sendDetail(CommandSender sender, String label, String value) {
@@ -168,10 +206,11 @@ public class MemoryCommand implements CommandExecutor, TabCompleter {
                                       String[] args) {
         if (cmd.getName().equalsIgnoreCase("am") && args.length == 1) {
             String input = args[0].toLowerCase();
-            if ("reload".startsWith(input)) {
-                return List.of("reload");
-            }
+            return List.of("info", "reload").stream()
+                    .filter(s -> s.startsWith(input))
+                    .toList();
         }
         return Collections.emptyList();
     }
 }
+
