@@ -97,12 +97,20 @@ public class MemoryMonitorTask extends BukkitRunnable {
 
             // 踢出所有玩家 + 關機必須在主執行緒執行
             Bukkit.getScheduler().runTask(plugin, () -> {
-                Component kickMessage = MiniMessage.miniMessage().deserialize(kickRaw);
-                for (Player player : Bukkit.getOnlinePlayers()) {
-                    player.kick(kickMessage);
-                }
-                Bukkit.shutdown();
+                // 先觸發 spark heapsummary
+                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "spark heapsummary");
+                log.info("已觸發 spark heapsummary，等待 5 秒後執行關機程序...");
+
+                // 延遲 5 秒 (100 ticks) 後再踢出玩家並關機，讓 spark 有時間產生報告
+                Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                    Component kickMessage = MiniMessage.miniMessage().deserialize(kickRaw);
+                    for (Player player : Bukkit.getOnlinePlayers()) {
+                        player.kick(kickMessage);
+                    }
+                    Bukkit.shutdown();
+                }, 100L);
             });
+            this.cancel(); // 停止後續的檢查排程，避免重複觸發
             return;
         }
 

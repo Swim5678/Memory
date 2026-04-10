@@ -118,7 +118,7 @@ public class MemoryCommand {
                         Component.text("容器: ").color(barColor)
                                 .append(Component.text(
                                         formatBytes(displayUsed) + " / " + formatBytes(denominator)
-                                                + "  (" + pct + ")").color(WHITE))
+                                                + "  (" + pct + "%)").color(WHITE))
                 );
             }
             int bars = 20;
